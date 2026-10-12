@@ -4,7 +4,9 @@ conexao = sqlite3.connect("banco.db")
 cursor = conexao.cursor()
 from rich import print as rprint
 import os
-from verificacao_email import enviar_email_con, gerar_codigo_aleatorio
+import re
+from verificacoes_cad.verificacao_email import enviar_email_con, gerar_codigo_aleatorio
+from verificacoes_cad.cad_funcoes import *
 
 # Cores Utilizadas Frequentemente
 amarelo = "#EEA103"
@@ -19,19 +21,29 @@ def cadastrar_usuario():
     rprint(f"[{vermelho}]=============================[/{vermelho}]\n")
 
     while True:
-        nome_usuario = input("Digite seu nome de usuário: ")
-        if len(nome_usuario) > 12:
-            rprint("[#d74013]Nome inválido. Digite um nome com no máximo 12 caracteres.[/#d74013]")
-        elif len(nome_usuario) < 3:
-            rprint("[#d74013]Nome inválido. Digite um nome com pelo menos 3 caracteres.[/#d74013]")
-        else:
-            break
+        nome_usuario = input("Nome de usuário:")
+        if len(nome_usuario) > 12: 
+            rprint(f"\n❌[{vermelho}]Nome inválido. Digite um nome com no máximo 12 caracteres[/{vermelho}]")
+            continue
+        if len(nome_usuario) < 3:
+            rprint(f"\n❌[{vermelho}]Nome inválido. Digite um nome com pelo menos 3 caracteres[/{vermelho}]")
+            continue
+        if " " in nome_usuario:
+            rprint(f"\n❌[{vermelho}]Nome inválido. O nome não pode conter espaços[/{vermelho}]")
+            continue
+        if not re.fullmatch(r"[a-zA-Z0-9_]+", nome_usuario):
+            rprint(f"\n❌[{vermelho}]Nome inválido. O nome só pode conter letras, números e underscores[/{vermelho}]")
+            continue
+        break
+
     while True:
         email = input("E-mail: ")
         if "@" not in email or "." not in email:
-            rprint("[#d74013]E-mail inválido. Email não contém @ ou endereço válido.[/#d74013]")
+            rprint(f"\n❌[{vermelho}]E-mail inválido. Email não contém @ ou endereço válido[/{vermelho}]")
+            continue
         elif email.endswith ("@ufrpe.br") == False:
-                    rprint("[#d74013]E-mail inválido. Digite um e-mail institucional da UFRPE.[/#d74013]")
+            rprint(f"\n❌[{vermelho}]E-mail inválido. Digite um e-mail institucional da UFRPE[/{vermelho}]")
+            continue
         else:
             codigo = gerar_codigo_aleatorio()
             expira = datetime.now() + timedelta(minutes=10)
@@ -39,28 +51,28 @@ def cadastrar_usuario():
             try:
                 enviar_email_con(email, codigo)
             except Exception as erro:
-                rprint(f"\n[{vermelho}]Falha ao enviar o código.[/{vermelho}]")
+                rprint(f"\n❌[{vermelho}]Falha ao enviar o código.[/{vermelho}]")
                 print(f"Detalhe do erro: {erro}")
                 return
 
             rprint(f"\n[{verde}]Código enviado com sucesso! Verifique sua caixa de entrada e spam.[/{verde}]")
 
             tentativas = 0
-            while tentativas < 3:
-                print ("Digite o código de verificação enviado para seu email:")
-                codigo_digitado = input("(use letras maiúsculas, sem espaços) ")
+            while tentativas <= 3:
+                codigo_digitado = input("Digite o código de verificação enviado para seu email:")
+                codigo_tratado = codigo_digitado.strip().upper()
                 if datetime.now() > expira:
-                    rprint(f"\n[{vermelho}]Código expirado. Por favor, solicite um novo código.[/{vermelho}]")
+                    rprint(f"\n❌[{vermelho}]Código expirado. Por favor, solicite um novo código.[/{vermelho}]")
                     break
 
-                if codigo_digitado == codigo:
+                if codigo_tratado == codigo:
                     rprint(f"\n[{verde}]Email verificado com sucesso! [/{verde}]")
                     break
 
                 tentativas += 1
-                rprint(f"\n[{vermelho}]Código incorreto. Tentativas restantes: {3 - tentativas} [/{vermelho}]")
+                rprint(f"\n❌[{vermelho}]Código incorreto. Tentativas restantes: {3 - tentativas} [/{vermelho}]")
             else:
-                rprint(f"\n[{vermelho}]Número máximo de tentativas atingido. Por favor, solicite um novo código.[/{vermelho}]")
+                rprint(f"\n❌[{vermelho}]Número máximo de tentativas atingido. Por favor, solicite um novo código.[/{vermelho}]")
                 return
 
             break
@@ -70,7 +82,17 @@ def cadastrar_usuario():
         break
 
     while True:
+        rprint (f"\nSenha precisa conter:\n- Pelo menos 8 caracteres\n- Uma letra maiúscula\n- Uma letra minúscula\n- Um número\n- Um caractere especial")
         senha = input("Senha: ")
+        senha_valida, mensagem_senha = verificar_senha(senha)
+        if not senha_valida:
+            rprint(f"\n❌[{vermelho}]{mensagem_senha}[/{vermelho}]")
+            continue
+        confirmacao_senha = input("Confirme sua senha:")
+        while confirmacao_senha != senha:
+            rprint(f"\n❌[{vermelho}]As senhas não coincidem[/{vermelho}]")
+            confirmacao_senha = input("Por favor, tente novamente: ")
+        rprint(f"\n[{verde}]Senha criada com sucesso![/{verde}]")
         break
 
     cursor.execute('''INSERT INTO usuarios_ruranimais (nome_usuario, email, senha, cpf) VALUES (?, ?, ?, ?)''', (nome_usuario, email, senha, cpf))
