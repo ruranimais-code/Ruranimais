@@ -1,0 +1,48 @@
+# O seguinte repositório serve para armazenar linhas de código usadas durante todo o desenvolvimento do código,
+agilizando processos e construções do projeto.
+-texto de ryn (a.k.a ryanzinho)
+
+----- Linha com 5 traços 
+
+----- CORES RURANIMAIS HEXADECIMAL -----
+
+Amarelo Alaranjado: #EEA103 /// EEA103 
+Vermelho Alaranjado: #D74013 /// D74013
+Azul Escuro: #2B283B /// 2B283B
+Verde: #719029 /// 719029
+Bege: #F8E8CF /// F8E8CF 
+
+# Cores Utilizadas Frequentemente
+amarelo = "#EEA103"
+vermelho = "#D74013"
+azul = "#2B283B"
+verde = "#719029"
+bege = "#F8E8CF"
+
+----- LIMPEZA DE TERMINAL -----
+
+
+os.system(comando_de_limpeza)
+
+
+----- BATERIA DE TESTES -----
+testes = [
+    "abc",
+    "ABC",
+    "123",
+    "abc123",
+    "#@$%",
+    "Olá",
+    "你好",
+    "こんにちは",
+    "Привет",
+    "😀",
+    " ",
+    "\t",
+    "",
+    "Olá mundo",
+    "10.5",
+    "-10",
+    "\u200b",
+    "\x00",
+]
