@@ -4,11 +4,10 @@ conexao = sqlite3.connect("banco.db")
 cursor = conexao.cursor()
 from rich import print as rprint
 # Imports
-import os
 import re
-from datetime import datetime, timedelta
-from funcoes.verificacao_email import enviar_email_con, gerar_codigo_aleatorio
-from funcoes.cad_funcoes import *
+from funcoes.verificacao_email import *
+from funcoes.crud_funcoes import *
+from funcoes.crud_funcoes import _campo_duplicado
 
 # Cores Utilizadas Frequentemente
 amarelo = "#EEA103"
@@ -16,6 +15,7 @@ vermelho = "#D74013"
 azul = "#2B283B"
 verde = "#719029"
 bege = "#F8E8CF"
+
 
 # Início do cadastro ebaa
 def cadastrar_usuario():
@@ -38,6 +38,12 @@ def cadastrar_usuario():
         if not re.fullmatch(r"[a-zA-Z0-9_]+", nome_usuario):
             rprint(f"\n❌[{vermelho}]Nome inválido. O nome só pode conter letras, números e underscores[/{vermelho}]")
             continue
+
+        # Pra não poder usar dados que já foram cadastrados
+        campo_duplicado = _campo_duplicado(nome_usuario=nome_usuario)
+        if campo_duplicado:
+            rprint(f"\n❌[{vermelho}]{campo_duplicado} nome de usuário já existe[/{vermelho}]")
+            continue
         break
 
     # Inserir email + verificação de duas etapas (envio de código e verificação do mesmo)
@@ -50,34 +56,14 @@ def cadastrar_usuario():
             rprint(f"\n❌[{vermelho}]E-mail inválido. Digite um e-mail institucional da UFRPE[/{vermelho}]")
             continue
         else:
-            codigo = gerar_codigo_aleatorio()
-            expira = datetime.now() + timedelta(minutes=10)
-            rprint(f"\n[{amarelo}]Enviando código para {email}... [/{amarelo}]")
-            try:
-                enviar_email_con(email, codigo)
-            except Exception as erro:
-                rprint(f"\n❌[{vermelho}]Falha ao enviar o código.[/{vermelho}]")
-                print(f"Detalhe do erro: {erro}")
-                return
 
-            rprint(f"\n[{verde}]Código enviado com sucesso! Verifique sua caixa de entrada e spam.[/{verde}]")
+            # Pra não poder usar dados que já foram cadastrados
+            campo_duplicado = _campo_duplicado(nome_usuario=nome_usuario, email=email,)
+            if campo_duplicado:
+                rprint(f"\n❌[{vermelho}]{campo_duplicado} já está em uso. Informe outro[/{vermelho}]")
+                continue
 
-            tentativas = 0
-            while tentativas <= 3:
-                codigo_digitado = input("Digite o código de verificação enviado para seu email:")
-                codigo_tratado = codigo_digitado.strip().upper()
-                if datetime.now() > expira:
-                    rprint(f"\n❌[{vermelho}]Código expirado. Por favor, solicite um novo código.[/{vermelho}]")
-                    break
-
-                if codigo_tratado == codigo:
-                    rprint(f"\n[{verde}]Email verificado com sucesso! [/{verde}]")
-                    break
-
-                tentativas += 1
-                rprint(f"\n❌[{vermelho}]Código incorreto. Tentativas restantes: {3 - tentativas} [/{vermelho}]")
-            else:
-                rprint(f"\n❌[{vermelho}]Número máximo de tentativas atingido. Por favor, solicite um novo código.[/{vermelho}]")
+            if not verificar_codigo_email(email, enviar_email_con, "Email"):
                 return
 
             break
@@ -89,6 +75,13 @@ def cadastrar_usuario():
         if not cpf_valido:
             rprint(f"\n❌[{vermelho}]{mensagem_cpf}[/{vermelho}]")
             continue
+
+        # Pra não poder usar dados que já foram cadastrados
+        campo_duplicado = _campo_duplicado(nome_usuario=nome_usuario, email=email, cpf=cpf,)
+        if campo_duplicado:
+            rprint(f"\n❌[{vermelho}]{campo_duplicado} já está em uso. Informe outro[/{vermelho}]")
+            continue
+
         rprint(f"\n[{amarelo}]Aguarde um instante...[/{amarelo}]")
 
         ok, resultado = verificar_cpf(cpf)
@@ -114,59 +107,91 @@ def cadastrar_usuario():
         rprint(f"\n[{verde}]Senha criada com sucesso![/{verde}]")
         break
 
-    cursor.execute('''INSERT INTO usuarios_ruranimais (nome_usuario, email, senha, cpf) VALUES (?, ?, ?, ?)''', (nome_usuario, email, senha, cpf))
+    # Pra não poder usar dados que já foram cadastrados
+    conexao.execute("BEGIN IMMEDIATE")
+    campo_duplicado = _campo_duplicado(nome_usuario=nome_usuario, email=email, cpf=cpf,)
+    if campo_duplicado:
+        conexao.rollback()
+        rprint(f"\n❌[{vermelho}]{campo_duplicado} já cadastrado. Cadastro cancelado[/{vermelho}]")
+        return
+
+    cursor.execute(
+        '''INSERT INTO usuarios_ruranimais (nome_usuario, email, senha, cpf)
+           VALUES (?, ?, ?, ?)''',
+        (nome_usuario, email, senha, cpf),
+    )
+    # Comita informações no banco de dados
     conexao.commit()
 
     rprint(f"\n[{verde}]Usuário cadastrado com sucesso![/{verde}]")
 
+# Login ebaaaaaaa
 def login():
     rprint(f"\n[{vermelho}]=============================[/{vermelho}]")
     rprint(f" :heart:  𖹭  [{verde}][bold]LOGIN DE USUÁRIO[/bold][/{verde}] 𖹭 :heart:")
     rprint(f"[{vermelho}]=============================[/{vermelho}]\n")
-#faltam tratamentos de erro obviamente
-    email = input("Digite seu email: ")
-    senha = input("Digite sua senha: ")
-    cursor.execute('''SELECT * FROM usuarios_ruranimais WHERE email = ? AND senha = ?''', (email, senha))
-    dados_usuario = cursor.fetchone()
-    os.system('cls')
-    print(f"ID: {dados_usuario[0]}\nNome: {dados_usuario[1]}\nEmail: {dados_usuario[2]}\nSenha:{dados_usuario[3]}\nCPF: {dados_usuario[4]}")
-    confirmacao = input("Esses são os seus dados? Se sim, digite 1, se não digite 2:")
-    lista_dados_usuario = dados_usuario
-    if confirmacao == "1":
-        print("Login realizado com sucesso!")
-        return lista_dados_usuario
-    elif confirmacao == "2":
-        print("Login não realizado, tente novamente.")
-    else:
-        print("Opção inválida, tente novamente.")
 
+# Procura email no banco de dados cm alguns requisitos pra ir buscar
+    while True:
+        email = input("Digite seu email: ").strip()
+        if "@" not in email or "." not in email:
+            rprint(f"\n❌[{vermelho}]E-mail inválido. Email não contém @ ou endereço válido[/{vermelho}]")
+            continue
+        elif email.endswith ("@ufrpe.br") == False:
+                rprint(f"\n❌[{vermelho}]E-mail inválido. Digite um e-mail institucional da UFRPE[/{vermelho}]")
+                continue
+        elif cursor.execute(
+                "SELECT * FROM usuarios_ruranimais WHERE email = ?",
+                (email,),
+            ):
+            dados_usuario = cursor.fetchone()
+            if dados_usuario is None:
+                rprint(f"\n❌[{vermelho}]Email não cadastrado![/{vermelho}]")
+                continue
+        else:
+            break
 
+        # Dá 3 chances de acertar a senha
+        tentativas_restantes = 3
+        while tentativas_restantes > 0:
+            senha = input("Digite sua senha: ").strip()
+            if senha == dados_usuario[3]:
+                if verificar_codigo_email(email, enviar_email_log, "Login"):
+                    return dados_usuario
+                return None
 
+            tentativas_restantes -= 1
+            rprint(f"\n❌[{vermelho}]Senha incorreta\nTentativas restantes: {tentativas_restantes}[/{vermelho}]")
 
+        # Depois de errar 3 vezes, pergunta se quer redefinir senha
+        # Caso não, aplicação é encerrada e usuário volta pro menu
+        deseja_recuperar = input("Deseja redefinir sua senha? (s/n): ").strip().lower()
+        if deseja_recuperar != "s":
+            print (f"Até a próxima :(")
+            return None
 
-# def login():
-#     os.system("clear")
-#     rprint("\n[#d74013]================[/#d74013]")
-#     rprint(":green_heart: :heart: [#719029][bold]LOGIN[/bold][/#719029] :heart: :green_heart:")
-#     rprint("[#d74013]================[/#d74013]")
+        # Login realizado se função recuperar_senha prosseguir
+        dados_usuario = recuperar_senha(dados_usuario)
+        if dados_usuario is not None:
+            rprint(f"\n[{verde}]Login realizado com sucesso![/{verde}]\nBem vindo novamente ᨐฅ")
+        return dados_usuario
 
-#     email = input("E-mail: ")
-#     senha = input("Senha: ")
+def atualizar_dados(dados_usuario):
+    while True:
+        rprint(f"\n[{vermelho}]===========================[/{vermelho}]")
+        rprint(f":heart:  𖹭  [{verde}][bold]ATUALIZAR DADOS[/bold][/{verde}] 𖹭 :heart:")
+        rprint(f"[{vermelho}]===========================\n[/{vermelho}]")
+        rprint(f"[{verde}][bold]Digite o comando destacado ou o número associado para prosseguir.[/bold][/{verde}]")
+        rprint(f"1 - [{amarelo}]Deletar[/{amarelo}] conta\n")
+        
+        opcao = input("")
 
-#     cursor.execute(
-#         "SELECT nome, email, senha FROM contas_ruranimais WHERE email = ? AND senha = ?",
-#         (email, senha)
-#     )
-#     usuario = cursor.fetchone()
-
-#     if usuario:
-#         nome, _, _ = usuario
-#         print(f"\nBem-vindo(a), {nome}!")
-#         return {"nome": nome, "email": email, "senha": senha}
-
-#     print("\n❌ E-mail ou senha incorretos.")
-#     return None
-
-# def checar_dados():
-
-# def atualizar_dados():
+        if opcao.lower() == "deletar" or opcao == "1":
+            conta_deletada = deletar_usuario(
+                dados_usuario[2],
+                dados_usuario[1],
+                dados_usuario[4],
+                dados_usuario[3],
+            )
+            if conta_deletada:
+                return True

@@ -29,6 +29,7 @@ if platform.system() == "Linux" or platform.system() == "Darwin":
     comando_de_limpeza = "clear"
 if platform.system() == "Windows":
     comando_de_limpeza = "cls"
+    os.system(comando_de_limpeza)
 
 # Cores Utilizadas Frequentemente
 amarelo = "#EEA103"
@@ -41,9 +42,9 @@ confirmacao_log = []
 
 # Mostra a logo do Ruranimais ao iniciar
 mostrar_logo()
-os.system(comando_de_limpeza)
 # Início do Programa - Menu Ruranimais :)
 def menu_inicial():
+    os.system(comando_de_limpeza)
     while True:
         rprint(f"\n[{vermelho}]===============================[/{vermelho}]")
         rprint(f":heart:  𖹭  [{verde}][bold]R U R A N I M A I S[/bold][/{verde}] 𖹭 :heart:")
@@ -59,14 +60,17 @@ def menu_inicial():
 
         opcao = input("")
 
-        if opcao.lower == "cadastro" or opcao == "1":
+        if opcao.lower() == "cadastro" or opcao == "1":
             os.system(comando_de_limpeza)
             cadastrar_usuario()
             print("Após o cadastro, é necessário realizar o login para acessar o sistema.")
 
-        elif opcao.lower == "login" or opcao == "2":
+        elif opcao.lower() == "login" or opcao == "2":
             lista_dados_usuario = login()
-            confirmacao_log.append("1")
+            if lista_dados_usuario is not None:
+                confirmacao_log.append("1")
+            else:
+                confirmacao_log.clear()
 
         elif opcao.lower() == "checar" or opcao == "3":
             if len(confirmacao_log) == 0:
@@ -74,16 +78,29 @@ def menu_inicial():
                 print("\nVocê não está logado. Faça o login primeiro.")
                 time.sleep(2)
             else:
-                ordem_dados = ["ID: ", "Nome: ", "Email: ", "Senha: ", "CPF: "]
-                for a, b in zip(ordem_dados, lista_dados_usuario):
+                ordem_dados = ["ID: ", "Nome: ", "Email: ", "CPF: "]
+                dados_visiveis = (
+                    lista_dados_usuario[0],
+                    lista_dados_usuario[1],
+                    lista_dados_usuario[2],
+                    lista_dados_usuario[4],
+                )
+                for a, b in zip(ordem_dados, dados_visiveis):
                     print(a)
                     print(b)
 
                     
-        elif opcao == "4":
-            print("indisponível no momento, foi mal :p")
-            time.sleep(3)
-            #terminar isso aqui depois
+        elif opcao.lower() == "atualizar" or opcao == "4":
+            if len(confirmacao_log) == 0:
+                os.system(comando_de_limpeza)
+                print("\nVocê não está logado. Faça o login primeiro.")
+                time.sleep(2)
+            else:
+                os.system(comando_de_limpeza)
+                if atualizar_dados(lista_dados_usuario):
+                    confirmacao_log.clear()
+                    lista_dados_usuario = None
+            
 
         elif opcao.lower() == "sair" or opcao == "5":
             os.system(comando_de_limpeza)
@@ -93,9 +110,9 @@ def menu_inicial():
         else:
             os.system(comando_de_limpeza)
             rprint(
-                   "[#d74013]=====================[/#d74013]\n\n"
-                   "[bold][#d74013]Opção inválida! Tente novamente :)[/#d74013][/bold]\n\n"
-                   "[#d74013]=====================[/#d74013]\n\n"
+                   f"[{vermelho}]=====================[/{vermelho}]\n\n"
+                   f"[bold][{vermelho}]Opção inválida! Tente novamente :)[/{vermelho}][/bold]\n\n"
+                   f"[{vermelho}]=====================[/{vermelho}]\n\n"
                   )
             time.sleep(3)
             os.system(comando_de_limpeza)

@@ -1,5 +1,4 @@
 import time
-import os
 from pathlib import Path
 
 
@@ -11,6 +10,5 @@ def mostrar_logo(caminho_logo=None):
     )
     with arquivo_logo.open("r", encoding="utf-8") as f:
         logo= f.read()
-    os.system("cls" if os.name == "nt" else "clear")
     print(logo)
     time.sleep(4)
