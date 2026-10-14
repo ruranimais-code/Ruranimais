@@ -11,9 +11,14 @@ A ferramenta busca conectar pessoas por toda a região da UFRPE e proximidades, 
 <h1>Release 1.0 - Previsão</h1>
 <p>Para o primeiro release do programa Ruranimais, as seguintes funcionalidades devem ser inicialmente implementadas:</p><br>
 <ul>
-  <li>Identificação - (CRUD)</li>
-  <li>Postagens de Texto</li>
-  <li>Participação em Enquetes</li>
-  <li>Bate-Papo/Chat</li>
-  <li>Envio de Imagens</li>
+  <li>Menu principal</li>
+  <li>Cadastro</li>
+  <li>Login</li>
+  <li>Verificação de duas etapas</li>
+  <li>Verificação de CPF</li>
 </ul>
+<h2>Bibliotecas</h2>
+<p>
+Bibliotecas externas utilizadas:<br> <strong>Rich, Requests, python-dotenv</strong>
+</p>
+<p>
